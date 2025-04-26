@@ -111,13 +111,31 @@ class Game:
         while self.score_timer >= 100:
             self.score += 1
             self.score_timer -= 100
+    
+    def _circle_rect_collision(self, cx, cy, radius, rect):
+        """
+        Return True if circle (cx, cy, radius) intersects the given rectangle.
+        """
+        # Find closest point on rect to circle center
+        closest_x = max(rect.left, min(cx, rect.right))
+        closest_y = max(rect.top,  min(cy, rect.bottom))
+        # Compute distance to closest point
+        dx = cx - closest_x
+        dy = cy - closest_y
+        return (dx*dx + dy*dy) <= (radius * radius)
 
     def _check_collisions(self):
         """
         Check for collisions between the bird and any pipe; mark game over.
         """
+        # circle-rectangle collision: circle centered on bird, radius half current sprite width
+        cx, cy = self.bird.pos.x, self.bird.pos.y
+        # use half the sprite height as collision radius
+        radius = self.bird.image.get_height() / 2
         for pipe in self.pipes:
-            if self.bird.rect.colliderect(pipe.top_rect) or self.bird.rect.colliderect(pipe.bottom_rect):
+            # check top and bottom rectangles
+            if self._circle_rect_collision(cx, cy, radius, pipe.top_rect) or \
+               self._circle_rect_collision(cx, cy, radius, pipe.bottom_rect):
                 self.game_over = True
                 break
 
@@ -131,15 +149,15 @@ class Game:
             pipe.draw(self.screen)
         # draw bird and other sprites
         self.all_sprites.draw(self.screen)
-        # draw instructions
-        instr = self.font.render("Press SPACE to flap, Q to quit", True, (0, 0, 0))
-        self.screen.blit(instr, (10, 10))
-        # draw score
-        score_surf = self.font.render(f"Score: {self.score}", True, (0, 0, 0))
-        self.screen.blit(score_surf, (10, 30))
-        # draw game over overlay
+        # draw instructions and score in white on one line
+        text_color = (255, 255, 255)
+        info = f"Press SPACE to flap, Q to quit   Score: {self.score}"
+        info_surf = self.font.render(info, True, text_color)
+        self.screen.blit(info_surf, (10, 10))
+        # draw game over overlay in white
         if self.game_over:
-            over_surf = self.font.render("Game Over! Press R to restart", True, (255, 0, 0))
+            over_text = "Game Over! Press R to restart"
+            over_surf = self.font.render(over_text, True, text_color)
             # center the text
             ox = settings.WIDTH // 2 - over_surf.get_width() // 2
             oy = settings.HEIGHT // 2 - over_surf.get_height() // 2

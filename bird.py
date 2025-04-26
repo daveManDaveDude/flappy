@@ -47,14 +47,7 @@ class Bird(pygame.sprite.Sprite):
         self.velocity += settings.GRAVITY * dt_sec
         self.pos.y += self.velocity * dt_sec
 
-        # Floor/ceiling collision
-        limit = settings.HEIGHT - settings.BIRD_RADIUS
-        if self.pos.y > limit:
-            self.pos.y = limit
-            self.velocity = -self.velocity * settings.RESTITUTION
-        elif self.pos.y < settings.BIRD_RADIUS:
-            self.pos.y = settings.BIRD_RADIUS
-            self.velocity = 0
+        # (floor/ceiling collision will occur after choosing image to use its dimensions)
 
         # Handle animation frames
         if self.animating:
@@ -71,7 +64,15 @@ class Bird(pygame.sprite.Sprite):
         else:
             self.image = self.base_image
 
-        # Update rect to new position
+        # Floor/ceiling collision based on current frame height
+        half_h = self.image.get_height() / 2
+        if self.pos.y > settings.HEIGHT - half_h:
+            self.pos.y = settings.HEIGHT - half_h
+            self.velocity = -self.velocity * settings.RESTITUTION
+        elif self.pos.y < half_h:
+            self.pos.y = half_h
+            self.velocity = 0
+        # Update rect to new position and size
         self.rect = self.image.get_rect(center=(int(self.pos.x), int(self.pos.y)))
 
     def flap(self):
