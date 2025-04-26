@@ -128,14 +128,35 @@ class Game:
         """
         Check for collisions between the bird and any pipe; mark game over.
         """
-        # circle-rectangle collision: circle centered on bird, radius half current sprite width
+        # 1) ground collision: end game if bird hits bottom of screen
+        if self.bird.rect.bottom >= settings.HEIGHT:
+            self.game_over = True
+            return
+        # 2) circle-rectangle collision tests
         cx, cy = self.bird.pos.x, self.bird.pos.y
-        # use half the sprite height as collision radius
         radius = self.bird.image.get_height() / 2
         for pipe in self.pipes:
-            # check top and bottom rectangles
-            if self._circle_rect_collision(cx, cy, radius, pipe.top_rect) or \
-               self._circle_rect_collision(cx, cy, radius, pipe.bottom_rect):
+            # top pipe: collision always fatal (no bounce)
+            tr = pipe.top_rect
+            if self._circle_rect_collision(cx, cy, radius, tr):
+                self.game_over = True
+                break
+            # bottom pipe: allow bounce on top edge, else fatal
+            br = pipe.bottom_rect
+            if self._circle_rect_collision(cx, cy, radius, br):
+                # determine collision edge
+                cy_clamped = max(br.top, min(cy, br.bottom))
+                if cy_clamped == br.top and not pipe.bounced:
+                    pipe.bounced = True
+                    # bounce
+                    self.bird.velocity = -self.bird.velocity * settings.RESTITUTION
+                    # reposition just above bottom segment
+                    self.bird.pos.y = br.top - radius
+                    self.bird.rect = self.bird.image.get_rect(center=(int(self.bird.pos.x), int(self.bird.pos.y)))
+                    self.score += 1000
+                    # continue game
+                    continue
+                # any other collision with bottom_rect is fatal
                 self.game_over = True
                 break
 

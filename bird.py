@@ -64,14 +64,12 @@ class Bird(pygame.sprite.Sprite):
         else:
             self.image = self.base_image
 
-        # Floor/ceiling collision based on current frame height
+        # Ceiling collision: prevent flying above top of screen
         half_h = self.image.get_height() / 2
-        if self.pos.y > settings.HEIGHT - half_h:
-            self.pos.y = settings.HEIGHT - half_h
-            self.velocity = -self.velocity * settings.RESTITUTION
-        elif self.pos.y < half_h:
+        if self.pos.y < half_h:
             self.pos.y = half_h
             self.velocity = 0
+        # (no floor bounce here; ground collision is handled in Game)
         # Update rect to new position and size
         self.rect = self.image.get_rect(center=(int(self.pos.x), int(self.pos.y)))
 
