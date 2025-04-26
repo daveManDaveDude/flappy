@@ -33,20 +33,21 @@ class Bird(pygame.sprite.Sprite):
         scale_factor = 8
         # scale each image to a quarter of its original dimensions
         lw, lh = level_img.get_size()
-        level_img = pygame.transform.scale(level_img, (lw // scale_factor, lh // scale_factor))
+        level_img = pygame.transform.smoothscale(level_img, (lw // scale_factor, lh // scale_factor))
         dw, dh = down_img.get_size()
-        down_img  = pygame.transform.scale(down_img,  (dw // scale_factor, dh // scale_factor))
+        down_img  = pygame.transform.smoothscale(down_img,  (dw // scale_factor, dh // scale_factor))
         uw, uh = up_img.get_size()
-        up_img    = pygame.transform.scale(up_img,    (uw // scale_factor, uh // scale_factor))
-        # animation frames: level, down, level, up, level
-        self.frames = [level_img, down_img, level_img, up_img, level_img]
+        up_img    = pygame.transform.smoothscale(up_img,    (uw // scale_factor, uh // scale_factor))
+        # base image and animation frames (down, level, up)
+        self.base_image  = level_img
+        self.anim_frames = [down_img, level_img, up_img]
         # animation state
         self.anim_index     = 0
         self.anim_timer     = 0
         self.frame_duration = 80   # ms per frame
         self.animating      = False
-        # set initial image and rect
-        self.image = self.frames[self.anim_index]
+        # set initial image (level wings) and rect
+        self.image = self.base_image
         self.rect  = self.image.get_rect(center=(x, y))
 
     def update(self, dt):
@@ -68,11 +69,13 @@ class Bird(pygame.sprite.Sprite):
             if self.anim_timer >= self.frame_duration:
                 self.anim_timer -= self.frame_duration
                 self.anim_index += 1
-                if self.anim_index >= len(self.frames):
+                if self.anim_index >= len(self.anim_frames):
                     self.animating = False
-                    self.anim_index = 0
-        # update image and rect for blitting
-        self.image = self.frames[self.anim_index]
+        # choose current image (animated or base)
+        if self.animating:
+            self.image = self.anim_frames[self.anim_index]
+        else:
+            self.image = self.base_image
         self.rect  = self.image.get_rect(center=(int(self.pos.x), int(self.pos.y)))
 
     def flap(self):
