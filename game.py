@@ -2,6 +2,8 @@ import pygame
 import sys
 
 import settings
+import random
+import random
 ## Import Bird from root-level bird.py first; fallback to sprites/bird.py
 try:
     from bird import Bird
@@ -39,6 +41,11 @@ class Game:
         # Pipes
         self.pipes = []
         self.pipe_timer = 0
+        # dynamic pipe speed and spawn interval
+        self.pipe_speed = settings.PIPE_SPEED
+        self.pipe_interval = settings.PIPE_SPAWN_INTERVAL
+        # dynamic spawn interval with randomness (20% variability)
+        self.pipe_interval = settings.PIPE_SPAWN_INTERVAL
         # Score
         self.score = 0
         # Game over flag
@@ -86,27 +93,38 @@ class Game:
         """
         Create a new Pipe at the right edge and add it to the list.
         """
-        pipe = Pipe(settings.WIDTH)
+        # randomize vertical gap by ±20%
+        gap = int(settings.PIPE_GAP * (1.0 + random.uniform(-0.2, 0.2)))
+        pipe = Pipe(settings.WIDTH, speed=self.pipe_speed, gap=gap)
         self.pipes.append(pipe)
 
     def _update_pipes(self, dt):
         """
         Update existing pipes, spawn new ones, and remove off-screen pipes.
         """
-        # spawn timer
+        # spawn timer with variable interval
         self.pipe_timer += dt
-        if self.pipe_timer >= settings.PIPE_SPAWN_INTERVAL:
-            self.pipe_timer -= settings.PIPE_SPAWN_INTERVAL
+        if self.pipe_timer >= self.pipe_interval:
+            # spawn a new pipe
+            self.pipe_timer -= self.pipe_interval
             self._spawn_pipe()
+            # pick next interval with ±20% randomness
+            factor = 1.0 + random.uniform(-0.2, 0.2)
+            self.pipe_interval = settings.PIPE_SPAWN_INTERVAL * factor
         # update and cull
         # update pipes and handle off-screen removal
         for pipe in list(self.pipes):
             pipe.update(dt)
-            # scoring: when bird passes beyond pipe's right edge
+            # scoring: when bird center passes pipe's right edge
             if not pipe.passed and (pipe.x + pipe.width) < self.bird.pos.x:
                 pipe.passed = True
-                # award 100 points if a bounce occurred on this pipe, else 10
-                self.score += 100 if getattr(pipe, 'bounced', False) else 10
+                # award bonus: 100 if bounced on this pipe, else 10
+                self.score += 100 if pipe.bounced else 10
+                # increase overall pipe speed
+                self.pipe_speed += 5
+                # update speed on all existing pipes
+                for p in self.pipes:
+                    p.speed = self.pipe_speed
             # remove off-screen pipes
             if pipe.off_screen():
                 self.pipes.remove(pipe)
@@ -141,23 +159,22 @@ class Game:
             if self._circle_rect_collision(cx, cy, radius, tr):
                 self.game_over = True
                 break
-            # bottom pipe: allow bounce on top edge when bird is falling, else fatal
+            # bottom pipe collision: bounce only if bounce_zone and top-edge contact while descending
             br = pipe.bottom_rect
             if self._circle_rect_collision(cx, cy, radius, br):
                 # determine collision edge (clamp cy to rect)
                 cy_clamped = max(br.top, min(cy, br.bottom))
-                # bounce only on top edge when descending
-                if cy_clamped == br.top and self.bird.velocity > 0:
-                    # mark bounce for scoring
+                # bounce pad logic
+                if pipe.bounce_zone and cy_clamped == br.top and self.bird.velocity > 0:
                     pipe.bounced = True
                     # invert and dampen velocity
                     self.bird.velocity = -self.bird.velocity * settings.RESTITUTION
                     # reposition bird just above the bottom pipe segment
                     self.bird.pos.y = br.top - radius
                     self.bird.rect = self.bird.image.get_rect(center=(int(self.bird.pos.x), int(self.bird.pos.y)))
-                    # skip further collision checks for this frame
+                    # skip fatal collision
                     continue
-                # any other collision on bottom pipe is fatal
+                # otherwise, fatal collision
                 self.game_over = True
                 break
 
@@ -174,6 +191,9 @@ class Game:
         # draw instructions and score in white on one line
         text_color = (255, 255, 255)
         info = f"Press SPACE to flap, Q to quit   Score: {self.score}"
+        # debug: show pipe speed
+        if self.debug:
+            info += f"   Speed: {int(self.pipe_speed)}"
         info_surf = self.font.render(info, True, text_color)
         self.screen.blit(info_surf, (10, 10))
         # draw game over overlay in white
