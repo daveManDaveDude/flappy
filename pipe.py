@@ -24,8 +24,6 @@ class Pipe:
         bottom_y = self.top_height + self.gap
         bottom_height = settings.HEIGHT - bottom_y
         self.bottom_rect = pygame.Rect(self.x, bottom_y, self.width, bottom_height)
-        # flag to prevent multiple bounces on the same pipe
-        self.bounced = False
 
     def update(self, dt):
         """Move the pipe left by speed * dt."""

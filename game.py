@@ -26,6 +26,7 @@ class Game:
         self.font = pygame.font.SysFont(None, 24)
         # initialize or reset game data
         self.running = True
+        self.debug = False          # debug mode: draw collider
         self.start_new_game()
 
     def start_new_game(self):
@@ -73,11 +74,14 @@ class Game:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_q:
                     self.running = False
-                # restart game after game over
-                if self.game_over and event.key == pygame.K_r:
+                elif event.key == pygame.K_d:
+                    # toggle debug collider display
+                    self.debug = not self.debug
+                elif self.game_over and event.key == pygame.K_r:
+                    # restart after game over
                     self.start_new_game()
-                # normal flap input only when playing
-                if not self.game_over and event.key == pygame.K_SPACE:
+                elif not self.game_over and event.key == pygame.K_SPACE:
+                    # flap when playing
                     self.bird.flap()
     
     def _spawn_pipe(self):
@@ -141,22 +145,23 @@ class Game:
             if self._circle_rect_collision(cx, cy, radius, tr):
                 self.game_over = True
                 break
-            # bottom pipe: allow bounce on top edge, else fatal
+            # bottom pipe: allow bounce on top edge when bird is falling, else fatal
             br = pipe.bottom_rect
             if self._circle_rect_collision(cx, cy, radius, br):
-                # determine collision edge
+                # determine collision edge (clamp cy to rect)
                 cy_clamped = max(br.top, min(cy, br.bottom))
-                if cy_clamped == br.top and not pipe.bounced:
-                    pipe.bounced = True
-                    # bounce
+                # bounce only on top edge and when descending
+                if cy_clamped == br.top and self.bird.velocity > 0:
+                    # invert and dampen velocity
                     self.bird.velocity = -self.bird.velocity * settings.RESTITUTION
-                    # reposition just above bottom segment
+                    # reposition bird just above the bottom pipe segment
                     self.bird.pos.y = br.top - radius
                     self.bird.rect = self.bird.image.get_rect(center=(int(self.bird.pos.x), int(self.bird.pos.y)))
+                    # award bonus points
                     self.score += 1000
-                    # continue game
+                    # skip further collision checks for this frame
                     continue
-                # any other collision with bottom_rect is fatal
+                # any other collision on bottom pipe is fatal
                 self.game_over = True
                 break
 
@@ -183,4 +188,10 @@ class Game:
             ox = settings.WIDTH // 2 - over_surf.get_width() // 2
             oy = settings.HEIGHT // 2 - over_surf.get_height() // 2
             self.screen.blit(over_surf, (ox, oy))
+        # debug: draw collision circle
+        if self.debug:
+            # circle centered on bird with radius = half sprite height
+            radius = int(self.bird.image.get_height() / 2)
+            center = (int(self.bird.pos.x), int(self.bird.pos.y))
+            pygame.draw.circle(self.screen, (255, 0, 0), center, radius, 1)
         pygame.display.flip()
