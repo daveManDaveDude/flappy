@@ -39,7 +39,7 @@ class Game:
         self.bird = Bird(100, settings.HEIGHT // 2)
         self.all_sprites = pygame.sprite.Group(self.bird)
         # Pipes
-        self.pipes = []
+        self.pipes = pygame.sprite.Group()
         self.pipe_timer = 0
         # dynamic pipe speed and spawn interval
         self.pipe_speed = settings.PIPE_SPEED
@@ -94,7 +94,7 @@ class Game:
         # randomize vertical gap by ±20%
         gap = int(settings.PIPE_GAP * (1.0 + random.uniform(-0.2, 0.2)))
         pipe = Pipe(settings.WIDTH, speed=self.pipe_speed, gap=gap)
-        self.pipes.append(pipe)
+        self.pipes.add(pipe)
 
     def _update_pipes(self, dt):
         """
@@ -109,12 +109,12 @@ class Game:
             # pick next interval with ±20% randomness
             factor = 1.0 + random.uniform(-0.2, 0.2)
             self.pipe_interval = settings.PIPE_SPAWN_INTERVAL * factor
-        # update and cull
-        # update pipes and handle off-screen removal
+        # move all pipes
+        self.pipes.update(dt)
+        # scoring and culling
         for pipe in list(self.pipes):
-            pipe.update(dt)
             # scoring: when bird center passes pipe's right edge
-            if not pipe.passed and (pipe.x + pipe.width) < self.bird.pos.x:
+            if not pipe.passed and pipe.rect.right < self.bird.pos.x:
                 pipe.passed = True
                 # award bonus: 100 if bounced on this pipe, else 10
                 self.score += 100 if pipe.bounced else 10
@@ -182,8 +182,7 @@ class Game:
         """
         self.screen.fill((135, 206, 235))  # sky blue
         # draw pipes behind the bird
-        for pipe in self.pipes:
-            pipe.draw(self.screen)
+        self.pipes.draw(self.screen)
         # draw bird and other sprites
         self.all_sprites.draw(self.screen)
         # draw instructions and score in white on one line
