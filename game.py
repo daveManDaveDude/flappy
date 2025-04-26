@@ -41,7 +41,6 @@ class Game:
         self.pipe_timer = 0
         # Score
         self.score = 0
-        self.score_timer = 0
         # Game over flag
         self.game_over = False
         # Spawn initial pipe
@@ -58,7 +57,6 @@ class Game:
             if not self.game_over:
                 self.all_sprites.update(dt)
                 self._update_pipes(dt)
-                self._update_score(dt)
                 self._check_collisions()
             # always draw frame
             self.draw()
@@ -101,20 +99,18 @@ class Game:
             self.pipe_timer -= settings.PIPE_SPAWN_INTERVAL
             self._spawn_pipe()
         # update and cull
+        # update pipes and handle off-screen removal
         for pipe in list(self.pipes):
             pipe.update(dt)
+            # scoring: when bird passes beyond pipe's right edge
+            if not pipe.passed and (pipe.x + pipe.width) < self.bird.pos.x:
+                pipe.passed = True
+                # award 100 points if a bounce occurred on this pipe, else 10
+                self.score += 100 if getattr(pipe, 'bounced', False) else 10
+            # remove off-screen pipes
             if pipe.off_screen():
                 self.pipes.remove(pipe)
     
-    def _update_score(self, dt):
-        """
-        Increment score by 1 per 0.1 second survived.
-        """
-        self.score_timer += dt
-        # award a point for each 100 ms
-        while self.score_timer >= 100:
-            self.score += 1
-            self.score_timer -= 100
     
     def _circle_rect_collision(self, cx, cy, radius, rect):
         """
@@ -150,15 +146,15 @@ class Game:
             if self._circle_rect_collision(cx, cy, radius, br):
                 # determine collision edge (clamp cy to rect)
                 cy_clamped = max(br.top, min(cy, br.bottom))
-                # bounce only on top edge and when descending
+                # bounce only on top edge when descending
                 if cy_clamped == br.top and self.bird.velocity > 0:
+                    # mark bounce for scoring
+                    pipe.bounced = True
                     # invert and dampen velocity
                     self.bird.velocity = -self.bird.velocity * settings.RESTITUTION
                     # reposition bird just above the bottom pipe segment
                     self.bird.pos.y = br.top - radius
                     self.bird.rect = self.bird.image.get_rect(center=(int(self.bird.pos.x), int(self.bird.pos.y)))
-                    # award bonus points
-                    self.score += 1000
                     # skip further collision checks for this frame
                     continue
                 # any other collision on bottom pipe is fatal

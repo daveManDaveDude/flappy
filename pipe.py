@@ -24,6 +24,9 @@ class Pipe:
         bottom_y = self.top_height + self.gap
         bottom_height = settings.HEIGHT - bottom_y
         self.bottom_rect = pygame.Rect(self.x, bottom_y, self.width, bottom_height)
+        # flags for bounce scoring and passing scoring
+        self.bounced = False
+        self.passed = False
 
     def update(self, dt):
         """Move the pipe left by speed * dt."""
