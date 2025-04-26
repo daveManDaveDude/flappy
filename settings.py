@@ -32,3 +32,9 @@ PIPE_VARIANCE = 0.2        # variability fraction for gap/spawn interval
 # Bounce zone configuration
 PIPE_BOUNCE_CHANCE = 0.2   # probability a pipe has a bounce zone (0–1)
 PIPE_BOUNCE_STRIPE_HEIGHT = 5  # height of the bounce-zone stripe (px)
+# Color constants
+BACKGROUND_COLOR = (135, 206, 235)  # sky blue
+PIPE_COLOR = (0, 0, 0)
+BOUNCE_STRIPE_COLOR = (255, 255, 0)
+TEXT_COLOR = (255, 255, 255)
+DEBUG_CIRCLE_COLOR = (255, 0, 0)

@@ -27,16 +27,16 @@ class Pipe(pygame.sprite.Sprite):
         # create the visual image of both segments
         image = pygame.Surface((self.width, settings.HEIGHT), pygame.SRCALPHA)
         # top pipe
-        pygame.draw.rect(image, (0, 0, 0), (0, 0, self.width, self.top_height))
+        pygame.draw.rect(image, settings.PIPE_COLOR, (0, 0, self.width, self.top_height))
         # bottom pipe
-        pygame.draw.rect(image, (0, 0, 0), (0, bottom_y, self.width, bottom_height))
+        pygame.draw.rect(image, settings.PIPE_COLOR, (0, bottom_y, self.width, bottom_height))
         # bounce-zone indicator (yellow stripe)
         self.bounce_zone = (random.random() < settings.PIPE_BOUNCE_CHANCE)
         if self.bounce_zone:
             stripe_height = settings.PIPE_BOUNCE_STRIPE_HEIGHT
             pygame.draw.rect(
                 image,
-                (255, 255, 0),
+                settings.BOUNCE_STRIPE_COLOR,
                 (0, bottom_y, self.width, stripe_height)
             )
         # assign sprite attributes

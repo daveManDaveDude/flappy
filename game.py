@@ -1,11 +1,12 @@
 import sys
-import random
+from enum import Enum
 
 import pygame
 
 import settings
-# enum for game state
-from enum import Enum
+from utils import circle_rect_collision, random_gap, random_spawn_interval
+from input_handler import InputHandler
+from renderer import Renderer
 
 # custom event for spawning pipes
 SPAWN_PIPE = pygame.USEREVENT + 1
@@ -24,6 +25,10 @@ try:
     from pipe import Pipe
 except ImportError:
     from sprites.pipe import Pipe
+# Utility functions and handlers
+from utils import circle_rect_collision, random_gap, random_spawn_interval
+from input_handler import InputHandler
+from renderer import Renderer
 
 
 class Game:
@@ -38,7 +43,10 @@ class Game:
         self.font = pygame.font.SysFont(None, 24)
         # initialize or reset game data
         self.running = True
-        self.debug = False          # debug mode: draw collider
+        self.debug = False  # debug mode: draw collider
+        # input and rendering handlers
+        self.input_handler = InputHandler()
+        self.renderer = Renderer(self.screen, self.font)
         self.start_new_game()
 
     def start_new_game(self):
@@ -71,54 +79,43 @@ class Game:
                 self.all_sprites.update(dt)
                 self._update_pipes(dt)
                 self._check_collisions()
-            # always draw frame
-            self.draw()
+            # always render frame
+            self.renderer.render(self)
         pygame.quit()
 
     def handle_events(self):
         """
-        Handle all pending pygame events.
+        Handle all pending pygame events: spawn pipes and process input actions.
         """
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-            elif event.type == SPAWN_PIPE:
-                # spawn next pipe only while playing
-                if self.state == GameState.PLAYING:
-                    self._spawn_pipe()
-                    self._schedule_next_pipe()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_q:
-                    self.running = False
-                elif event.key == pygame.K_d:
-                    # toggle debug collider display
-                    self.debug = not self.debug
-                elif event.key == pygame.K_r and self.state == GameState.GAME_OVER:
-                    # restart after game over
-                    self.start_new_game()
-                elif event.key == pygame.K_SPACE and self.state == GameState.PLAYING:
-                    # flap when playing
-                    self.bird.flap()
+        events = pygame.event.get()
+        # spawn pipes via custom event
+        for event in events:
+            if event.type == SPAWN_PIPE and self.state == GameState.PLAYING:
+                self._spawn_pipe()
+                self._schedule_next_pipe()
+        # process user input
+        actions = self.input_handler.process(events)
+        if actions['quit']:
+            self.running = False
+        if actions['toggle_debug']:
+            self.debug = not self.debug
+        if actions['restart'] and self.state == GameState.GAME_OVER:
+            self.start_new_game()
+        if actions['flap'] and self.state == GameState.PLAYING:
+            self.bird.flap()
     
     def _spawn_pipe(self):
         """
         Create a new Pipe at the right edge and add it to the list.
         """
-        # randomize vertical gap by ± variance
-        gap = int(
-            settings.PIPE_GAP *
-            (1.0 + random.uniform(-settings.PIPE_VARIANCE, settings.PIPE_VARIANCE))
-        )
+        # randomized vertical gap
+        gap = random_gap()
         pipe = Pipe(settings.WIDTH, speed=self.pipe_speed, gap=gap)
         self.pipes.add(pipe)
 
     def _schedule_next_pipe(self):
         """Schedule the next pipe spawn via a Pygame timer event."""
-        # maintain consistent horizontal spacing regardless of speed
-        base_interval = settings.PIPE_SPAWN_INTERVAL * (settings.PIPE_SPEED / self.pipe_speed)
-        # apply variance
-        factor = 1.0 + random.uniform(-settings.PIPE_VARIANCE, settings.PIPE_VARIANCE)
-        interval = int(base_interval * factor)
+        interval = random_spawn_interval(self.pipe_speed)
         pygame.time.set_timer(SPAWN_PIPE, interval)
 
     def _update_pipes(self, dt):
@@ -144,17 +141,6 @@ class Game:
             if pipe.off_screen():
                 self.pipes.remove(pipe)
 
-    def _circle_rect_collision(self, cx, cy, radius, rect):
-        """
-        Return True if circle (cx, cy, radius) intersects the given rectangle.
-        """
-        # Find closest point on rect to circle center
-        closest_x = max(rect.left, min(cx, rect.right))
-        closest_y = max(rect.top,  min(cy, rect.bottom))
-        # Compute distance to closest point
-        dx = cx - closest_x
-        dy = cy - closest_y
-        return (dx*dx + dy*dy) <= (radius * radius)
 
     def _check_collisions(self):
         """Check for bird collisions with ground and pipes."""
@@ -173,11 +159,11 @@ class Game:
         radius = self.bird.image.get_height() / 2
         for pipe in self.pipes:
             # top pipe: always fatal
-            if self._circle_rect_collision(cx, cy, radius, pipe.top_rect):
+            if circle_rect_collision(cx, cy, radius, pipe.top_rect):
                 self.state = GameState.GAME_OVER
                 return
             # bottom pipe: may bounce off top edge
-            if self._circle_rect_collision(cx, cy, radius, pipe.bottom_rect):
+            if circle_rect_collision(cx, cy, radius, pipe.bottom_rect):
                 cy_clamped = max(pipe.bottom_rect.top, min(cy, pipe.bottom_rect.bottom))
                 if pipe.bounce_zone and cy_clamped == pipe.bottom_rect.top and self.bird.velocity > 0:
                     pipe.bounced = True
@@ -192,13 +178,13 @@ class Game:
         """
         Draw background, sprites, and UI.
         """
-        self.screen.fill((135, 206, 235))  # sky blue
+        self.screen.fill(settings.BACKGROUND_COLOR)
         # draw pipes behind the bird
         self.pipes.draw(self.screen)
         # draw bird and other sprites
         self.all_sprites.draw(self.screen)
         # draw instructions and score in white on one line
-        text_color = (255, 255, 255)
+        text_color = settings.TEXT_COLOR
         info = f"Press SPACE to flap, Q to quit   Score: {self.score}"
         # debug: show pipe speed
         if self.debug:
@@ -218,5 +204,5 @@ class Game:
             # circle centered on bird with radius = half sprite height
             radius = int(self.bird.image.get_height() / 2)
             center = (int(self.bird.pos.x), int(self.bird.pos.y))
-            pygame.draw.circle(self.screen, (255, 0, 0), center, radius, 1)
+            pygame.draw.circle(self.screen, settings.DEBUG_CIRCLE_COLOR, center, radius, 1)
         pygame.display.flip()
