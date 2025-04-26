@@ -31,10 +31,14 @@ class Pipe(pygame.sprite.Sprite):
         # bottom pipe
         pygame.draw.rect(image, (0, 0, 0), (0, bottom_y, self.width, bottom_height))
         # bounce-zone indicator (yellow stripe)
-        self.bounce_zone = (random.random() < 0.2)
+        self.bounce_zone = (random.random() < settings.PIPE_BOUNCE_CHANCE)
         if self.bounce_zone:
-            stripe_height = 5
-            pygame.draw.rect(image, (255, 255, 0), (0, bottom_y, self.width, stripe_height))
+            stripe_height = settings.PIPE_BOUNCE_STRIPE_HEIGHT
+            pygame.draw.rect(
+                image,
+                (255, 255, 0),
+                (0, bottom_y, self.width, stripe_height)
+            )
         # assign sprite attributes
         self.image = image
         self.rect = image.get_rect(topleft=(x, 0))

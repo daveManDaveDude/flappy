@@ -40,16 +40,22 @@ class Bird(pygame.sprite.Sprite):
 
     def update(self, dt):
         """
-        Update velocity, position, handle collisions, and animate wings.
+        Update bird physics, animation, constraints, and sprite rect.
         dt: elapsed milliseconds since last frame.
         """
+        self._update_physics(dt)
+        self._update_animation(dt)
+        self._apply_constraints()
+        self._update_rect()
+
+    def _update_physics(self, dt):
+        """Apply gravity to velocity and update vertical position."""
         dt_sec = dt / 1000.0
         self.velocity += settings.GRAVITY * dt_sec
         self.pos.y += self.velocity * dt_sec
 
-        # (floor/ceiling collision will occur after choosing image to use its dimensions)
-
-        # Handle animation frames
+    def _update_animation(self, dt):
+        """Advance wing-flap animation frames."""
         if self.animating:
             self.anim_timer += dt
             if self.anim_timer >= self.frame_duration:
@@ -57,20 +63,17 @@ class Bird(pygame.sprite.Sprite):
                 self.anim_index += 1
                 if self.anim_index >= len(self.anim_frames):
                     self.animating = False
+        self.image = self.anim_frames[self.anim_index] if self.animating else self.base_image
 
-        # Choose current image
-        if self.animating:
-            self.image = self.anim_frames[self.anim_index]
-        else:
-            self.image = self.base_image
-
-        # Ceiling collision: prevent flying above top of screen
+    def _apply_constraints(self):
+        """Prevent bird from moving above the top of the screen."""
         half_h = self.image.get_height() / 2
         if self.pos.y < half_h:
             self.pos.y = half_h
             self.velocity = 0
-        # (no floor bounce here; ground collision is handled in Game)
-        # Update rect to new position and size
+
+    def _update_rect(self):
+        """Update the sprite rect based on current image and position."""
         self.rect = self.image.get_rect(center=(int(self.pos.x), int(self.pos.y)))
 
     def flap(self):

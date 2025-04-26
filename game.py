@@ -41,9 +41,10 @@ class Game:
         # Pipes
         self.pipes = pygame.sprite.Group()
         self.pipe_timer = 0
-        # dynamic pipe speed and spawn interval
+        # dynamic pipe speed and spawn interval (horizontal gap fixed)
         self.pipe_speed = settings.PIPE_SPEED
-        self.pipe_interval = settings.PIPE_SPAWN_INTERVAL
+        # initial time interval so pipes start at consistent horizontal spacing
+        self.pipe_interval = settings.PIPE_SPAWN_INTERVAL * (settings.PIPE_SPEED / self.pipe_speed)
         # Score
         self.score = 0
         # Game over flag
@@ -91,8 +92,11 @@ class Game:
         """
         Create a new Pipe at the right edge and add it to the list.
         """
-        # randomize vertical gap by ±20%
-        gap = int(settings.PIPE_GAP * (1.0 + random.uniform(-0.2, 0.2)))
+        # randomize vertical gap by ± variance
+        gap = int(
+            settings.PIPE_GAP *
+            (1.0 + random.uniform(-settings.PIPE_VARIANCE, settings.PIPE_VARIANCE))
+        )
         pipe = Pipe(settings.WIDTH, speed=self.pipe_speed, gap=gap)
         self.pipes.add(pipe)
 
@@ -100,34 +104,37 @@ class Game:
         """
         Update existing pipes, spawn new ones, and remove off-screen pipes.
         """
-        # spawn timer with variable interval
+        # handle pipe spawning, movement, scoring, and culling
+        self._spawn_timer_tick(dt)
+        self._move_and_score_pipes(dt)
+    
+    
+    def _spawn_timer_tick(self, dt):
+        """Advance the pipe spawn timer and spawn pipes at variable intervals."""
         self.pipe_timer += dt
         if self.pipe_timer >= self.pipe_interval:
-            # spawn a new pipe
             self.pipe_timer -= self.pipe_interval
             self._spawn_pipe()
-            # pick next interval with ±20% randomness
-            factor = 1.0 + random.uniform(-0.2, 0.2)
-            self.pipe_interval = settings.PIPE_SPAWN_INTERVAL * factor
-        # move all pipes
+            # compute base interval so horizontal gap remains constant
+            base_interval = settings.PIPE_SPAWN_INTERVAL * (settings.PIPE_SPEED / self.pipe_speed)
+            # pick next interval with ± variance
+            factor = 1.0 + random.uniform(-settings.PIPE_VARIANCE, settings.PIPE_VARIANCE)
+            self.pipe_interval = base_interval * factor
+
+    def _move_and_score_pipes(self, dt):
+        """Move pipes, award score for passed pipes, and remove off-screen pipes."""
         self.pipes.update(dt)
-        # scoring and culling
         for pipe in list(self.pipes):
-            # scoring: when bird center passes pipe's right edge
+            # scoring: bird passes pipe
             if not pipe.passed and pipe.rect.right < self.bird.pos.x:
                 pipe.passed = True
-                # award bonus: 100 if bounced on this pipe, else 10
                 self.score += 100 if pipe.bounced else 10
-                # increase overall pipe speed
                 self.pipe_speed += 5
-                # update speed on all existing pipes
                 for p in self.pipes:
                     p.speed = self.pipe_speed
-            # remove off-screen pipes
             if pipe.off_screen():
                 self.pipes.remove(pipe)
-    
-    
+
     def _circle_rect_collision(self, cx, cy, radius, rect):
         """
         Return True if circle (cx, cy, radius) intersects the given rectangle.
@@ -141,40 +148,36 @@ class Game:
         return (dx*dx + dy*dy) <= (radius * radius)
 
     def _check_collisions(self):
-        """
-        Check for collisions between the bird and any pipe; mark game over.
-        """
-        # 1) ground collision: end game if bird hits bottom of screen
+        """Check for bird collisions with ground and pipes."""
+        self._handle_ground_collision()
+        if not self.game_over:
+            self._handle_pipe_collisions()
+
+    def _handle_ground_collision(self):
+        """Mark game over if bird hits the ground."""
         if self.bird.rect.bottom >= settings.HEIGHT:
             self.game_over = True
-            return
-        # 2) circle-rectangle collision tests
+
+    def _handle_pipe_collisions(self):
+        """Check circle-rect collisions between bird and each pipe segment."""
         cx, cy = self.bird.pos.x, self.bird.pos.y
         radius = self.bird.image.get_height() / 2
         for pipe in self.pipes:
-            # top pipe: collision always fatal (no bounce)
-            tr = pipe.top_rect
-            if self._circle_rect_collision(cx, cy, radius, tr):
+            # top pipe: always fatal
+            if self._circle_rect_collision(cx, cy, radius, pipe.top_rect):
                 self.game_over = True
-                break
-            # bottom pipe collision: bounce only if bounce_zone and top-edge contact while descending
-            br = pipe.bottom_rect
-            if self._circle_rect_collision(cx, cy, radius, br):
-                # determine collision edge (clamp cy to rect)
-                cy_clamped = max(br.top, min(cy, br.bottom))
-                # bounce pad logic
-                if pipe.bounce_zone and cy_clamped == br.top and self.bird.velocity > 0:
+                return
+            # bottom pipe: may bounce off top edge
+            if self._circle_rect_collision(cx, cy, radius, pipe.bottom_rect):
+                cy_clamped = max(pipe.bottom_rect.top, min(cy, pipe.bottom_rect.bottom))
+                if pipe.bounce_zone and cy_clamped == pipe.bottom_rect.top and self.bird.velocity > 0:
                     pipe.bounced = True
-                    # invert and dampen velocity
                     self.bird.velocity = -self.bird.velocity * settings.RESTITUTION
-                    # reposition bird just above the bottom pipe segment
-                    self.bird.pos.y = br.top - radius
+                    self.bird.pos.y = pipe.bottom_rect.top - radius
                     self.bird.rect = self.bird.image.get_rect(center=(int(self.bird.pos.x), int(self.bird.pos.y)))
-                    # skip fatal collision
                     continue
-                # otherwise, fatal collision
                 self.game_over = True
-                break
+                return
 
     def draw(self):
         """
