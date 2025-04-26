@@ -4,6 +4,16 @@ import random
 import pygame
 
 import settings
+# enum for game state
+from enum import Enum
+
+# custom event for spawning pipes
+SPAWN_PIPE = pygame.USEREVENT + 1
+
+class GameState(Enum):
+    PLAYING = 1
+    GAME_OVER = 2
+
 ## Import Bird from root-level bird.py first; fallback to sprites/bird.py
 try:
     from bird import Bird
@@ -40,17 +50,14 @@ class Game:
         self.all_sprites = pygame.sprite.Group(self.bird)
         # Pipes
         self.pipes = pygame.sprite.Group()
-        self.pipe_timer = 0
-        # dynamic pipe speed and spawn interval (horizontal gap fixed)
+        # dynamic pipe speed
         self.pipe_speed = settings.PIPE_SPEED
-        # initial time interval so pipes start at consistent horizontal spacing
-        self.pipe_interval = settings.PIPE_SPAWN_INTERVAL * (settings.PIPE_SPEED / self.pipe_speed)
-        # Score
+        # reset score and game state
         self.score = 0
-        # Game over flag
-        self.game_over = False
-        # Spawn initial pipe
+        self.state = GameState.PLAYING
+        # spawn initial pipe and start spawn timer
         self._spawn_pipe()
+        self._schedule_next_pipe()
 
     def run(self):
         """
@@ -59,8 +66,8 @@ class Game:
         while self.running:
             dt = self.clock.tick(settings.FPS)
             self.handle_events()
-            # update game only if not game over
-            if not self.game_over:
+            # update game only if playing
+            if self.state == GameState.PLAYING:
                 self.all_sprites.update(dt)
                 self._update_pipes(dt)
                 self._check_collisions()
@@ -75,16 +82,21 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            elif event.type == SPAWN_PIPE:
+                # spawn next pipe only while playing
+                if self.state == GameState.PLAYING:
+                    self._spawn_pipe()
+                    self._schedule_next_pipe()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_q:
                     self.running = False
                 elif event.key == pygame.K_d:
                     # toggle debug collider display
                     self.debug = not self.debug
-                elif self.game_over and event.key == pygame.K_r:
+                elif event.key == pygame.K_r and self.state == GameState.GAME_OVER:
                     # restart after game over
                     self.start_new_game()
-                elif not self.game_over and event.key == pygame.K_SPACE:
+                elif event.key == pygame.K_SPACE and self.state == GameState.PLAYING:
                     # flap when playing
                     self.bird.flap()
     
@@ -100,26 +112,23 @@ class Game:
         pipe = Pipe(settings.WIDTH, speed=self.pipe_speed, gap=gap)
         self.pipes.add(pipe)
 
+    def _schedule_next_pipe(self):
+        """Schedule the next pipe spawn via a Pygame timer event."""
+        # maintain consistent horizontal spacing regardless of speed
+        base_interval = settings.PIPE_SPAWN_INTERVAL * (settings.PIPE_SPEED / self.pipe_speed)
+        # apply variance
+        factor = 1.0 + random.uniform(-settings.PIPE_VARIANCE, settings.PIPE_VARIANCE)
+        interval = int(base_interval * factor)
+        pygame.time.set_timer(SPAWN_PIPE, interval)
+
     def _update_pipes(self, dt):
         """
         Update existing pipes, spawn new ones, and remove off-screen pipes.
         """
-        # handle pipe spawning, movement, scoring, and culling
-        self._spawn_timer_tick(dt)
+        # move, score, and cull pipes
         self._move_and_score_pipes(dt)
     
     
-    def _spawn_timer_tick(self, dt):
-        """Advance the pipe spawn timer and spawn pipes at variable intervals."""
-        self.pipe_timer += dt
-        if self.pipe_timer >= self.pipe_interval:
-            self.pipe_timer -= self.pipe_interval
-            self._spawn_pipe()
-            # compute base interval so horizontal gap remains constant
-            base_interval = settings.PIPE_SPAWN_INTERVAL * (settings.PIPE_SPEED / self.pipe_speed)
-            # pick next interval with ± variance
-            factor = 1.0 + random.uniform(-settings.PIPE_VARIANCE, settings.PIPE_VARIANCE)
-            self.pipe_interval = base_interval * factor
 
     def _move_and_score_pipes(self, dt):
         """Move pipes, award score for passed pipes, and remove off-screen pipes."""
@@ -150,13 +159,13 @@ class Game:
     def _check_collisions(self):
         """Check for bird collisions with ground and pipes."""
         self._handle_ground_collision()
-        if not self.game_over:
+        if self.state == GameState.PLAYING:
             self._handle_pipe_collisions()
 
     def _handle_ground_collision(self):
         """Mark game over if bird hits the ground."""
         if self.bird.rect.bottom >= settings.HEIGHT:
-            self.game_over = True
+            self.state = GameState.GAME_OVER
 
     def _handle_pipe_collisions(self):
         """Check circle-rect collisions between bird and each pipe segment."""
@@ -165,7 +174,7 @@ class Game:
         for pipe in self.pipes:
             # top pipe: always fatal
             if self._circle_rect_collision(cx, cy, radius, pipe.top_rect):
-                self.game_over = True
+                self.state = GameState.GAME_OVER
                 return
             # bottom pipe: may bounce off top edge
             if self._circle_rect_collision(cx, cy, radius, pipe.bottom_rect):
@@ -176,7 +185,7 @@ class Game:
                     self.bird.pos.y = pipe.bottom_rect.top - radius
                     self.bird.rect = self.bird.image.get_rect(center=(int(self.bird.pos.x), int(self.bird.pos.y)))
                     continue
-                self.game_over = True
+                self.state = GameState.GAME_OVER
                 return
 
     def draw(self):
@@ -197,7 +206,7 @@ class Game:
         info_surf = self.font.render(info, True, text_color)
         self.screen.blit(info_surf, (10, 10))
         # draw game over overlay in white
-        if self.game_over:
+        if self.state == GameState.GAME_OVER:
             over_text = "Game Over! Press R to restart"
             over_surf = self.font.render(over_text, True, text_color)
             # center the text
