@@ -13,7 +13,7 @@ JUMP_VELOCITY = -105.0  # flap impulse velocity (px/sec)
 RESTITUTION = 0.8    # bounce damping (1.0 = perfect bounce)
 
 # Bird settings
-BIRD_RADIUS = 20
+# (bird radius is derived from sprite size; this constant is unused)
 
 # Asset scaling
 SCALE_FACTOR = 8     # images are scaled down by this factor

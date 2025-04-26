@@ -1,9 +1,9 @@
-import pygame
 import sys
+import random
+
+import pygame
 
 import settings
-import random
-import random
 ## Import Bird from root-level bird.py first; fallback to sprites/bird.py
 try:
     from bird import Bird
@@ -43,8 +43,6 @@ class Game:
         self.pipe_timer = 0
         # dynamic pipe speed and spawn interval
         self.pipe_speed = settings.PIPE_SPEED
-        self.pipe_interval = settings.PIPE_SPAWN_INTERVAL
-        # dynamic spawn interval with randomness (20% variability)
         self.pipe_interval = settings.PIPE_SPAWN_INTERVAL
         # Score
         self.score = 0

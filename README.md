@@ -38,7 +38,7 @@ $ git clone https://github.com/daveManDaveDude/flappy.git
 $ cd flappy
 
 # launch the prototype
-$ python flappy_03.py
+$ python run.py
 ```
 
 If you are on macOS or Linux you may have multiple Python installations; replace `python` with `python3` as needed.
@@ -49,10 +49,16 @@ If you are on macOS or Linux you may have multiple Python installations; replace
 
 ```
 flappy/
-├─ flappy_03.py         # main game script
-├─ wings_level.png      # sprite frame – wings level
-├─ wings_down.png       # sprite frame – wings down
-├─ wings_up.png         # sprite frame – wings up
+├─ run.py               # entry-point script
+├─ game.py              # main Game class and loop
+├─ bird.py              # Bird sprite
+├─ pipe.py              # Pipe obstacle
+├─ assets.py            # image-loading utility
+├─ settings.py          # game configuration constants
+├─ sprites/             # image assets
+│   ├─ wings_down.png
+│   ├─ wings_level.png
+│   └─ wings_up.png
 └─ __pycache__/         # byte-compiled cache (auto-generated)
 ```
 
@@ -60,16 +66,23 @@ flappy/
 
 ## ⚙️ Configuration
 
-Several constants at the top of `flappy_03.py` let you tweak gameplay without digging through the code:
+Game constants live in `settings.py`. Feel free to tweak any of these values:
 
 ```python
-WIDTH = 400        # window width (px)
-HEIGHT = 600       # window height (px)
-FPS = 60           # target frames per second
-GRAVITY = 200.0    # downward acceleration (px/s²)
-JUMP_VELOCITY = -105.0  # flap impulse velocity (px/s)
-RESTITUTION = 0.8  # bounciness on floor contact (0–1)
-```
+WIDTH = 800               # window width (px)
+HEIGHT = 600              # window height (px)
+FPS = 60                  # target frames per second
+GRAVITY = 200.0           # downward acceleration (px/s²)
+JUMP_VELOCITY = -105.0    # flap impulse velocity (px/s)
+RESTITUTION = 0.8         # bounce damping on pipes (0–1)
+SCALE_FACTOR = 8          # image scaling divisor
+FRAME_DURATION = 80       # ms per bird animation frame
+PIPE_WIDTH = 50           # width of each pipe (px)
+PIPE_GAP = 150            # vertical gap between pipes (px)
+PIPE_SPEED = 100          # horizontal speed of pipes (px/sec)
+PIPE_SPAWN_INTERVAL = 3500 # ms between spawning new pipes
+PIPE_MIN_HEIGHT = 50      # minimum height for pipe segments (px)
+```  
 
 Experiment to find a feel you like!
 

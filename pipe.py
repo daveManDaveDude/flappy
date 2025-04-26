@@ -31,9 +31,6 @@ class Pipe:
         # flags for bounce and passing scoring
         self.bounced = False
         self.passed = False
-        # flags for bounce scoring and passing scoring
-        self.bounced = False
-        self.passed = False
 
     def update(self, dt):
         """Move the pipe left by speed * dt."""
