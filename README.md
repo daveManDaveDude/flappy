@@ -12,9 +12,12 @@ A **minimal Flappy Bird–style prototype** written in Python with [Pygame](http
 |-----|--------|
 | **SPACE** | Flap upward |
 | **Q** | Quit the game |
-| **D** | Show collision detection area and display bird speed |
+| **D** | Cycle debug modes: show collision circle & pipe speed → disable collisions → off |
 
 The bird continuously falls under gravity. Time your flaps to keep it in the air and off the ground.
+
+* In debug mode, a collision circle is drawn around the bird and the current pipe speed is shown in the UI.
+* When collisions are disabled (second debug state), an asterisk (*) is appended to the score display to indicate no-collision mode.
 
 ---
 
