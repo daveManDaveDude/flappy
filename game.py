@@ -110,10 +110,18 @@ class Game:
         # reset score and game state
         self.score = 0
         self.state = GameState.PLAYING
-        # spawn initial pipe (closer to the bird) and start spawn timer
+        # spawn two initial pipes at game start for consistent horizontal spacing
         initial_x = self.bird.pos.x + settings.INITIAL_PIPE_OFFSET
+        # determine initial spawn interval (ms)
+        interval = random_spawn_interval(self.pipe_speed)
+        # first pipe at offset from bird
         self._spawn_pipe(initial_x)
-        self._schedule_next_pipe()
+        # second pipe positioned spawn_distance further right
+        spawn_distance = self.pipe_speed * (interval / 1000.0)
+        second_x = int(initial_x + spawn_distance)
+        self._spawn_pipe(second_x)
+        # schedule next pipe spawn after the interval
+        pygame.time.set_timer(SPAWN_PIPE, interval)
 
     def run(self):
         """
@@ -130,6 +138,15 @@ class Game:
                 self._update_pipes(dt)
                 # handle any collisions
                 self._check_collisions()
+                # when collision detection is off, clamp bird to bottom of screen
+                if not self.collision:
+                    half_h = self.bird.image.get_height() / 2
+                    bottom_limit = settings.HEIGHT - half_h
+                    if self.bird.pos.y > bottom_limit:
+                        self.bird.pos.y = bottom_limit
+                        self.bird.velocity = 0
+                        # update sprite rect to reflect clamped position
+                        self.bird._update_rect()
             # transition to game over after explosion animation
             if self.state == GameState.EXPLODING:
                 # if no explosion sprites remain, finalize game over and show burnt bird sprite
