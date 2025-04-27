@@ -33,8 +33,8 @@ class Bird(pygame.sprite.Sprite):
         self.anim_frames = [scale(down_img), self.base_image, scale(up_img)]
         # Pre-scale burnt image for post-explosion display (scaled down by an extra factor)
         burnt_scaled = scale(burnt_img)
-        # further reduce size by factor 2.2 for a slightly smaller sprite
-        factor = 2.2
+        # further reduce size by factor 2.8 for a slightly smaller sprite
+        factor = 2.7
         new_w = max(1, int(burnt_scaled.get_width() / factor))
         new_h = max(1, int(burnt_scaled.get_height() / factor))
         self.burnt_image = pygame.transform.smoothscale(
@@ -45,6 +45,7 @@ class Bird(pygame.sprite.Sprite):
         # Animation state
         self.anim_index = 0
         self.anim_timer = 0
+        # ms per animation frame
         self.frame_duration = settings.FRAME_DURATION
         self.animating = False
 

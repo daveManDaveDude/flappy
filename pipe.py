@@ -44,20 +44,26 @@ class Pipe(pygame.sprite.Sprite):
                 settings.BOUNCE_STRIPE_COLOR,
                 (0, bottom_y, self.width, stripe_height)
             )
-        # assign sprite attributes
+        # assign sprite attributes and track float x-position for smooth movement
         self.image = image
         self.rect = image.get_rect(topleft=(x, 0))
+        # float-based x position for sub-pixel movement
+        self.pos_x = float(self.rect.x)
         # scoring flags
         self.bounced = False
         self.passed = False
 
     def update(self, dt):
         """Move the pipe left by speed * dt and update collision rects."""
+        # compute movement in pixels (float)
         dx = self.speed * (dt / 1000.0)
-        self.rect.x -= dx
-        # update collision rects
-        self.top_rect.x = self.rect.x
-        self.bottom_rect.x = self.rect.x
+        # update float position and apply to rect
+        self.pos_x -= dx
+        new_x = int(self.pos_x)
+        self.rect.x = new_x
+        # update collision rects to match
+        self.top_rect.x = new_x
+        self.bottom_rect.x = new_x
 
 
     def off_screen(self):

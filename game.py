@@ -37,6 +37,7 @@ class Explosion(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.frame_index = 0
         self.timer = 0
+        # ms per animation frame
         self.frame_duration = settings.FRAME_DURATION
 
     def update(self, dt):
@@ -87,6 +88,7 @@ class Game:
         # initialize or reset game data
         self.running = True
         self.debug = False  # debug mode: draw collider
+        self.collision = True  # collision detection enabled
         # input and rendering handlers
         self.input_handler = InputHandler()
         self.renderer = Renderer(self.screen, self.font)
@@ -168,7 +170,15 @@ class Game:
         if actions['quit']:
             self.running = False
         if actions['toggle_debug']:
-            self.debug = not self.debug
+            # cycle through debug -> disable collisions -> back to normal
+            if not self.debug:
+                self.debug = True
+                self.collision = True
+            elif self.debug and self.collision:
+                self.collision = False
+            else:
+                self.debug = False
+                self.collision = True
         if actions['restart'] and self.state == GameState.GAME_OVER:
             self.start_new_game()
         if actions['flap'] and self.state == GameState.PLAYING:
@@ -242,6 +252,8 @@ class Game:
 
     def _check_collisions(self):
         """Check for bird collisions with ground and pipes."""
+        if not self.collision:
+            return
         self._handle_ground_collision()
         if self.state == GameState.PLAYING:
             self._handle_pipe_collisions()
@@ -296,6 +308,9 @@ class Game:
         # draw instructions and score in white on one line
         text_color = settings.TEXT_COLOR
         info = f"Press SPACE to flap, Q to quit   Score: {self.score}"
+        # indicate collision detection disabled
+        if not self.collision:
+            info += "*"
         # debug: show pipe speed
         if self.debug:
             info += f"   Speed: {int(self.pipe_speed)}"

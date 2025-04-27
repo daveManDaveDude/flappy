@@ -25,6 +25,10 @@ class Renderer:
         # Draw UI: instructions and score
         text_color = settings.TEXT_COLOR
         info = f"Press SPACE to flap, Q to quit   Score: {game.score}"
+        # indicate collision detection disabled
+        if hasattr(game, 'collision') and not game.collision:
+            info += "*"
+        # debug: show pipe speed
         if game.debug:
             info += f"   Speed: {int(game.pipe_speed)}"
         info_surf = self.font.render(info, True, text_color)
