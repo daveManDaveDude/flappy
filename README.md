@@ -50,12 +50,15 @@ If you are on macOS or Linux you may have multiple Python installations; replace
 ```
 flappy/
 ├─ run.py               # entry-point script
-├─ game.py              # main Game class and loop
-├─ bird.py              # Bird sprite
-├─ pipe.py              # Pipe obstacle
-├─ assets.py            # image-loading utility
-├─ settings.py          # game configuration constants
-├─ sprites/             # image assets
+├─ game.py              # orchestrates game loop, physics, and state
+├─ bird.py              # Bird sprite: physics & animation
+├─ pipe.py              # Pipe obstacle: geometry & rendering
+├─ assets.py            # image-loading utility with caching
+├─ settings.py          # configuration constants (physics, colors, UI)
+├─ utils.py             # collision detection & randomization helpers
+├─ input_handler.py     # maps raw Pygame events to high-level actions
+├─ renderer.py          # encapsulates all drawing logic
+├─ sprites/             # image assets (wing frames)
 │   ├─ wings_down.png
 │   ├─ wings_level.png
 │   └─ wings_up.png
@@ -91,6 +94,21 @@ Experiment to find a feel you like!
 
 ---
 
+## 📐 Code Organization
+
+This project follows a modular structure:
+  • run.py            – entry point, instantiates and runs Game
+  • game.py           – high-level game state, update loop, collision & scoring
+  • input_handler.py  – isolates input/event processing
+  • renderer.py       – centralizes all rendering and UI drawing
+  • bird.py           – Bird sprite: movement, gravity, animation
+  • pipe.py           – Pipe sprite: gap generation, movement, bounce logic
+  • assets.py         – image loading & caching utility
+  • settings.py       – tunable constants (dimensions, speeds, colors)
+  • utils.py          – shared helpers (collision tests, randomized gaps/spawns)
+
+---
+
 ## 🛣️ Roadmap / Ideas
 
 * Add scrolling pipes and collision detection
@@ -111,7 +129,9 @@ Feel free to open an issue or pull request if you’d like to tackle one of thes
 4. Push to the branch (`git push origin feature/my-improvement`)
 5. Open a pull request
 
-Please follow [PEP 8](https://peps.python.org/pep-0008/) and add docstrings where appropriate.
+Please follow [PEP 8](https://peps.python.org/pep-0008/), include type hints and docstrings,
+and consider using a formatter (e.g. black), linter (flake8), and import sorter (isort).
+We welcome updates to pre-commit configs or CI workflows to enforce code quality.
 
 ---
 
