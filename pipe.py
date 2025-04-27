@@ -9,16 +9,21 @@ import settings
 
 class Pipe(pygame.sprite.Sprite):
     """A pair of pipes as one sprite: top and bottom segments with a gap."""
-    def __init__(self, x, speed=None, gap=None):
+    def __init__(self, x, speed=None, gap=None, top_height=None):
         super().__init__()
         # speed can vary over time
         self.speed = speed if speed is not None else settings.PIPE_SPEED
         self.width = settings.PIPE_WIDTH
         # gap size (allow per-pipe randomness)
         self.gap = gap if gap is not None else settings.PIPE_GAP
-        # determine top-pipe height
+        # determine top-pipe height (optionally constrained)
+        min_top = settings.PIPE_MIN_HEIGHT
         max_top = settings.HEIGHT - settings.PIPE_MIN_HEIGHT - self.gap
-        self.top_height = random.randint(settings.PIPE_MIN_HEIGHT, max_top)
+        if top_height is None:
+            self.top_height = random.randint(min_top, max_top)
+        else:
+            # clamp provided top_height to allowable range
+            self.top_height = max(min(top_height, max_top), min_top)
         bottom_y = self.top_height + self.gap
         bottom_height = settings.HEIGHT - bottom_y
         # collision rects

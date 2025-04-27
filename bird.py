@@ -16,17 +16,31 @@ class Bird(pygame.sprite.Sprite):
         self.velocity = 0
 
         # Load and scale images
-        base = assets.load_image("wings_level.png")
-        down = assets.load_image("wings_down.png")
-        up   = assets.load_image("wings_up.png")
+        # Load bird wing frames and burnt sprite
+        base_img = assets.load_image("wings_level.png")
+        down_img = assets.load_image("wings_down.png")
+        up_img   = assets.load_image("wings_up.png")
+        # sprite to show after explosion
+        burnt_img = assets.load_image("bird_burnt.png")
 
         # Smooth scale each image down by SCALE_FACTOR
         def scale(img):
             w, h = img.get_size()
             return pygame.transform.smoothscale(img, (w // settings.SCALE_FACTOR, h // settings.SCALE_FACTOR))
 
-        self.base_image = scale(base)
-        self.anim_frames = [scale(down), self.base_image, scale(up)]
+        # Smooth scale images down by SCALE_FACTOR
+        self.base_image = scale(base_img)
+        self.anim_frames = [scale(down_img), self.base_image, scale(up_img)]
+        # Pre-scale burnt image for post-explosion display (scaled down by an extra factor)
+        burnt_scaled = scale(burnt_img)
+        # further reduce size by factor 2.2 for a slightly smaller sprite
+        factor = 2.2
+        new_w = max(1, int(burnt_scaled.get_width() / factor))
+        new_h = max(1, int(burnt_scaled.get_height() / factor))
+        self.burnt_image = pygame.transform.smoothscale(
+            burnt_scaled,
+            (new_w, new_h)
+        )
 
         # Animation state
         self.anim_index = 0
@@ -37,12 +51,16 @@ class Bird(pygame.sprite.Sprite):
         # Sprite initial image and rect
         self.image = self.base_image
         self.rect = self.image.get_rect(center=(x, y))
+        # freeze flag: skip updates when True (e.g., after explosion)
+        self.frozen = False
 
     def update(self, dt):
         """
         Update bird physics, animation, constraints, and sprite rect.
         dt: elapsed milliseconds since last frame.
         """
+        if self.frozen:
+            return
         self._update_physics(dt)
         self._update_animation(dt)
         self._apply_constraints()
