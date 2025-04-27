@@ -12,6 +12,7 @@ A **minimal Flappy Bird–style prototype** written in Python with [Pygame](http
 |-----|--------|
 | **SPACE** | Flap upward |
 | **Q** | Quit the game |
+| **D** | Show collision detection area and display bird speed |
 
 The bird continuously falls under gravity. Time your flaps to keep it in the air and off the ground.
 
@@ -111,8 +112,6 @@ This project follows a modular structure:
 
 ## 🛣️ Roadmap / Ideas
 
-* Add scrolling pipes and collision detection
-* Score keeping and a game-over screen
 * Sound effects for flap and collision events
 * Difficulty scaling over time
 * Packaging via `pipx` or a standalone executable with PyInstaller
